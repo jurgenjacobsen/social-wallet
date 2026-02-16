@@ -6,18 +6,24 @@ import { View, Text } from './Themed';
 import { SocialNetwork } from '@/constants/SocialNetworks';
 import { isLightColor } from '@/utils/colors';
 
+const CREDIT_CARD_RATIO = 1.586; // standard credit card aspect ratio (w/h)
+
 interface SocialCardProps {
   network: SocialNetwork;
   username: string;
   expanded?: boolean;
+  focused?: boolean;
   onPress?: () => void;
+  onLongPress?: () => void;
 }
 
 export default function SocialCard({
   network,
   username,
   expanded,
+  focused,
   onPress,
+  onLongPress,
 }: SocialCardProps) {
   const { width } = useWindowDimensions();
   const cardWidth = Math.min(width - 40, 360);
@@ -59,8 +65,44 @@ export default function SocialCard({
     );
   }
 
+  if (focused) {
+    const focusedHeight = cardWidth / CREDIT_CARD_RATIO;
+    return (
+      <Pressable onPress={onPress} onLongPress={onLongPress}>
+        <View
+          style={[
+            styles.focusedCard,
+            {
+              backgroundColor: network.color,
+              width: cardWidth,
+              height: focusedHeight,
+            },
+          ]}>
+          <View style={styles.focusedTop}>
+            <FontAwesome
+              name={network.icon as any}
+              size={32}
+              color={textColor}
+            />
+            <Text style={[styles.focusedName, { color: textColor }]}>
+              {network.name}
+            </Text>
+          </View>
+          <View style={styles.focusedBottom}>
+            <Text style={[styles.focusedUsername, { color: textColor }]}>
+              @{username}
+            </Text>
+            <Text style={[styles.focusedHint, { color: textColor }]}>
+              Hold for QR code
+            </Text>
+          </View>
+        </View>
+      </Pressable>
+    );
+  }
+
   return (
-    <Pressable onPress={onPress}>
+    <Pressable onPress={onPress} onLongPress={onLongPress}>
       <View
         style={[
           styles.card,
@@ -90,10 +132,10 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     paddingHorizontal: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 2,
   },
   cardName: {
     fontSize: 18,
@@ -104,6 +146,39 @@ const styles = StyleSheet.create({
   cardUsername: {
     fontSize: 14,
     opacity: 0.85,
+  },
+  focusedCard: {
+    borderRadius: 16,
+    padding: 24,
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  focusedTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  focusedName: {
+    fontSize: 22,
+    fontWeight: '800',
+    marginLeft: 12,
+  },
+  focusedBottom: {
+    backgroundColor: 'transparent',
+  },
+  focusedUsername: {
+    fontSize: 18,
+    fontWeight: '600',
+    opacity: 0.9,
+  },
+  focusedHint: {
+    fontSize: 12,
+    opacity: 0.5,
+    marginTop: 4,
   },
   expandedCard: {
     borderRadius: 20,

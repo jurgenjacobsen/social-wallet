@@ -1,6 +1,7 @@
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Tabs } from 'expo-router';
+import { Link, Tabs } from 'expo-router';
+import { Pressable } from 'react-native';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -27,6 +28,20 @@ export default function TabLayout() {
         options={{
           title: 'Wallet',
           tabBarIcon: ({ color }) => <TabBarIcon name="credit-card" color={color} />,
+          headerRight: () => (
+            <Link href="/(tabs)/two" asChild>
+              <Pressable>
+                {({ pressed }) => (
+                  <FontAwesome
+                    name="plus-circle"
+                    size={25}
+                    color={Colors[colorScheme ?? 'light'].tint}
+                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
+                  />
+                )}
+              </Pressable>
+            </Link>
+          ),
         }}
       />
       <Tabs.Screen

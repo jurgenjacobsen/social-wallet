@@ -9,6 +9,7 @@ import { useSocialProfiles } from '@/hooks/useSocialProfiles';
 
 export default function WalletScreen() {
   const { profiles, loading, reload } = useSocialProfiles();
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Reload profiles when the tab comes into focus
@@ -27,6 +28,14 @@ export default function WalletScreen() {
     .filter((n) => n.id);
 
   const expandedNetwork = activeNetworks.find((n) => n.id === expandedId);
+
+  const handleCardPress = (id: string) => {
+    setFocusedId((prev) => (prev === id ? null : id));
+  };
+
+  const handleCardLongPress = (id: string) => {
+    setExpandedId(id);
+  };
 
   if (loading) {
     return (
@@ -63,7 +72,9 @@ export default function WalletScreen() {
             <SocialCard
               network={network}
               username={network.username}
-              onPress={() => setExpandedId(network.id)}
+              focused={focusedId === network.id}
+              onPress={() => handleCardPress(network.id)}
+              onLongPress={() => handleCardLongPress(network.id)}
             />
           </View>
         ))}
