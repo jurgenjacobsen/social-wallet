@@ -1,12 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import QRCode from 'react-native-qrcode-svg';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { View, Text } from './Themed';
 import { SocialNetwork } from '@/constants/SocialNetworks';
 import { isLightColor } from '@/utils/colors';
 
 const CREDIT_CARD_RATIO = 1.586; // standard credit card aspect ratio (w/h)
+const ANIMATION_DURATION = 300;
 
 interface SocialCardProps {
   network: SocialNetwork;
@@ -27,10 +34,32 @@ export default function SocialCard({
 }: SocialCardProps) {
   const { width } = useWindowDimensions();
   const cardWidth = Math.min(width - 40, 360);
+  const collapsedHeight = 64; // approximate row height
+  const focusedHeight = cardWidth / CREDIT_CARD_RATIO;
   const url = network.urlTemplate.replace('{username}', username);
 
-  // Use white text for dark backgrounds, dark text for light ones
   const textColor = isLightColor(network.color) ? '#000' : '#fff';
+
+  // Animation shared values
+  const animatedHeight = useSharedValue(focused ? focusedHeight : collapsedHeight);
+  const animatedPadding = useSharedValue(focused ? 24 : 20);
+  const animatedOpacity = useSharedValue(focused ? 1 : 0);
+
+  useEffect(() => {
+    const timingConfig = { duration: ANIMATION_DURATION, easing: Easing.out(Easing.cubic) };
+    animatedHeight.value = withTiming(focused ? focusedHeight : collapsedHeight, timingConfig);
+    animatedPadding.value = withTiming(focused ? 24 : 20, timingConfig);
+    animatedOpacity.value = withTiming(focused ? 1 : 0, timingConfig);
+  }, [focused, focusedHeight]);
+
+  const animatedCardStyle = useAnimatedStyle(() => ({
+    height: animatedHeight.value,
+    paddingVertical: animatedPadding.value,
+  }));
+
+  const animatedHintStyle = useAnimatedStyle(() => ({
+    opacity: animatedOpacity.value,
+  }));
 
   if (expanded) {
     return (
@@ -65,77 +94,73 @@ export default function SocialCard({
     );
   }
 
-  if (focused) {
-    const focusedHeight = cardWidth / CREDIT_CARD_RATIO;
-    return (
-      <Pressable onPress={onPress} onLongPress={onLongPress}>
-        <View
-          style={[
-            styles.focusedCard,
-            {
-              backgroundColor: network.color,
-              width: cardWidth,
-              height: focusedHeight,
-            },
-          ]}>
-          <View style={styles.focusedTop}>
-            <FontAwesome
-              name={network.icon as any}
-              size={32}
-              color={textColor}
-            />
-            <Text style={[styles.focusedName, { color: textColor }]}>
-              {network.name}
-            </Text>
-          </View>
-          <View style={styles.focusedBottom}>
-            <Text style={[styles.focusedUsername, { color: textColor }]}>
-              @{username}
-            </Text>
-            <Text style={[styles.focusedHint, { color: textColor }]}>
-              Hold for QR code
-            </Text>
-          </View>
-        </View>
-      </Pressable>
-    );
-  }
-
   return (
     <Pressable onPress={onPress} onLongPress={onLongPress}>
-      <View
+      <Animated.View
         style={[
           styles.card,
-          { backgroundColor: network.color, width: cardWidth },
+          {
+            backgroundColor: network.color,
+            width: cardWidth,
+          },
+          animatedCardStyle,
         ]}>
-        <FontAwesome
-          name={network.icon as any}
-          size={24}
-          color={textColor}
-        />
-        <Text style={[styles.cardName, { color: textColor }]}>
-          {network.name}
-        </Text>
-        <Text style={[styles.cardUsername, { color: textColor }]}>
-          @{username}
-        </Text>
-      </View>
+        <View style={styles.animatedInner}>
+          <View style={styles.cardRow}>
+            <FontAwesome
+              name={network.icon as any}
+              size={focused ? 32 : 24}
+              color={textColor}
+            />
+            <Text
+              style={[
+                focused ? styles.focusedName : styles.cardName,
+                { color: textColor },
+              ]}>
+              {network.name}
+            </Text>
+            {!focused && (
+              <Text style={[styles.cardUsername, { color: textColor }]}>
+                @{username}
+              </Text>
+            )}
+          </View>
+          {focused && (
+            <Animated.View style={[styles.focusedBottom, animatedHintStyle]}>
+              <Text style={[styles.focusedUsername, { color: textColor }]}>
+                @{username}
+              </Text>
+              <Text style={[styles.focusedHint, { color: textColor }]}>
+                Hold for QR code
+              </Text>
+            </Animated.View>
+          )}
+        </View>
+      </Animated.View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
     borderRadius: 16,
-    paddingVertical: 20,
     paddingHorizontal: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.12,
     shadowRadius: 3,
     elevation: 2,
+    overflow: 'hidden',
+  },
+  animatedInner: {
+    flex: 1,
+    justifyContent: 'space-between',
+    backgroundColor: 'transparent',
+  },
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   cardName: {
     fontSize: 18,
@@ -146,21 +171,6 @@ const styles = StyleSheet.create({
   cardUsername: {
     fontSize: 14,
     opacity: 0.85,
-  },
-  focusedCard: {
-    borderRadius: 16,
-    padding: 24,
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  focusedTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
   },
   focusedName: {
     fontSize: 22,

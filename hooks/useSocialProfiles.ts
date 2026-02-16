@@ -68,5 +68,35 @@ export function useSocialProfiles() {
     [profiles],
   );
 
-  return { profiles, loading, upsertProfile, getUsername, reload: loadProfiles };
+  const clearAll = useCallback(async () => {
+    await saveProfiles([]);
+  }, [saveProfiles]);
+
+  const reorderProfiles = useCallback(
+    async (fromIndex: number, toIndex: number) => {
+      if (
+        fromIndex < 0 ||
+        toIndex < 0 ||
+        fromIndex >= profiles.length ||
+        toIndex >= profiles.length
+      ) {
+        return;
+      }
+      const updated = [...profiles];
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      await saveProfiles(updated);
+    },
+    [profiles, saveProfiles],
+  );
+
+  return {
+    profiles,
+    loading,
+    upsertProfile,
+    getUsername,
+    reload: loadProfiles,
+    clearAll,
+    reorderProfiles,
+  };
 }

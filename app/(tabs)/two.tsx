@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   ScrollView,
@@ -16,7 +16,7 @@ import { useSocialProfiles } from '@/hooks/useSocialProfiles';
 import { isLightColor } from '@/utils/colors';
 
 export default function PreferencesScreen() {
-  const { profiles, loading, upsertProfile, getUsername } =
+  const { profiles, loading, upsertProfile, getUsername, clearAll, reorderProfiles } =
     useSocialProfiles();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const textColor = useThemeColor({}, 'text');
@@ -42,6 +42,55 @@ export default function PreferencesScreen() {
       Alert.alert('Done', message);
     }
   };
+
+  const handleClearAll = () => {
+    const doIt = async () => {
+      await clearAll();
+      if (Platform.OS === 'web') {
+        window.alert('All cards cleared!');
+      } else {
+        Alert.alert('Done', 'All cards cleared!');
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('Remove all cards from your wallet?')) {
+        doIt();
+      }
+    } else {
+      Alert.alert(
+        'Clear all cards',
+        'Remove all cards from your wallet?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Clear', style: 'destructive', onPress: doIt },
+        ],
+      );
+    }
+  };
+
+  const activeProfiles = useMemo(
+    () => profiles.filter((p) => p.username),
+    [profiles],
+  );
+
+  const handleMoveUp = useCallback(
+    (index: number) => {
+      if (index > 0) {
+        reorderProfiles(index, index - 1);
+      }
+    },
+    [reorderProfiles],
+  );
+
+  const handleMoveDown = useCallback(
+    (index: number) => {
+      if (index < activeProfiles.length - 1) {
+        reorderProfiles(index, index + 1);
+      }
+    },
+    [reorderProfiles, activeProfiles.length],
+  );
 
   if (loading) {
     return (
@@ -105,6 +154,54 @@ export default function PreferencesScreen() {
           </View>
         );
       })}
+
+      {activeProfiles.length > 0 && (
+        <View style={styles.orderSection}>
+          <Text style={styles.sectionHeader}>Card order</Text>
+          <Text style={styles.sectionSubtitle}>
+            Reorder how cards appear in your wallet.
+          </Text>
+          {activeProfiles.map((profile, index) => {
+            const network = SOCIAL_NETWORKS.find((n) => n.id === profile.networkId);
+            if (!network) return null;
+            return (
+              <View key={profile.networkId} style={styles.orderRow}>
+                <View
+                  style={[styles.orderBadge, { backgroundColor: network.color }]}>
+                  <FontAwesome
+                    name={network.icon as any}
+                    size={16}
+                    color={isLightColor(network.color) ? '#000' : '#fff'}
+                  />
+                </View>
+                <Text style={styles.orderName}>{network.name}</Text>
+                <Pressable
+                  style={[styles.arrowButton, index === 0 && styles.arrowDisabled]}
+                  onPress={() => handleMoveUp(index)}
+                  disabled={index === 0}>
+                  <FontAwesome name="arrow-up" size={14} color={textColor} />
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.arrowButton,
+                    index === activeProfiles.length - 1 && styles.arrowDisabled,
+                  ]}
+                  onPress={() => handleMoveDown(index)}
+                  disabled={index === activeProfiles.length - 1}>
+                  <FontAwesome name="arrow-down" size={14} color={textColor} />
+                </Pressable>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
+      {activeProfiles.length > 0 && (
+        <Pressable style={styles.clearButton} onPress={handleClearAll}>
+          <FontAwesome name="trash" size={16} color="#fff" />
+          <Text style={styles.clearButtonText}>Clear all cards</Text>
+        </Pressable>
+      )}
     </ScrollView>
   );
 }
@@ -173,5 +270,64 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 10,
+  },
+  orderSection: {
+    marginTop: 32,
+    backgroundColor: 'transparent',
+  },
+  sectionHeader: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    opacity: 0.6,
+    marginBottom: 16,
+  },
+  orderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    backgroundColor: 'transparent',
+  },
+  orderBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  orderName: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  arrowButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+  arrowDisabled: {
+    opacity: 0.25,
+  },
+  clearButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#e53935',
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginTop: 32,
+  },
+  clearButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 8,
   },
 });
