@@ -26,7 +26,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Wallet',
+          title: 'Social Wallet',
           tabBarIcon: ({ color }) => <TabBarIcon name="credit-card" color={color} />,
           headerRight: () => (
             <Link href="/(tabs)/two" asChild>
